@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# > ./rubikDetector.py
-# > ./rubikDetector.py --dev=help
-# > ./rubikDetector.py --dev=dir:imagenes/test*.png 
+# > python3.8 rubikDetector.py
+# > python3.8 rubikDetector.py --dev=help
+# > python3.8 rubikDetector.py --dev=dir:imagenes/test*.png 
 
 import cv2               as cv
 from umucv.stream import autoStream
@@ -32,8 +32,8 @@ GRID_SIZE = 50
 G_CUBE_S = GRID_SIZE*3
 # Grid margin size and grid background color
 GRID_MARGIN = 20
-GRID_BACK_COL = [210, 250, 255]
-GRID_TEXT_COL = [72, 202, 255]
+GRID_BACK_COL = [226, 211, 163]
+GRID_TEXT_COL = [30, 30, 30]
 
 ### COLOR CLASSIFICATION CONSTANTS:
 # Threshold of when two colours are different. Measured in absolute difference
@@ -190,7 +190,16 @@ def simColor(color1, color2):
     # Colors are similar if measure is less than the threshold
     return sum(abs(color1-color2)) < SIM_COLOR_THRES
 
-def drawText(img, text, org, fontScale, color, thickness):
+def drawTextS(img, text, org, fontScale, color, thickness):
+    """
+    @brief Write text using OpenCV putText funtion.
+
+    Params names and types are the same as OpenCV putText function.
+    """
+    cv.putText(img, text, org, cv.FONT_HERSHEY_SIMPLEX, fontScale, \
+               color, thickness, cv.LINE_AA)
+
+def drawTextC(img, text, org, fontScale, color, thickness):
     """
     @brief Write text with countour using OpenCV putText funtion.
 
@@ -283,7 +292,7 @@ def drawGrid(cube, moves):
     if moves != []: 
         # Postion of the text
         pos = (GRID_MARGIN, G_CUBE_S*2+GRID_SIZE*2)
-        drawText(grid_frame, 'MOVES: ', (pos[0], pos[1]-30), 0.8, GRID_TEXT_COL, 2)
+        drawTextS(grid_frame, 'MOVES: ', (pos[0], pos[1]-30), 0.8, GRID_TEXT_COL, 2)
         # Split the moves to fit text in the window
         line_w = 9
         moves_splited = [ moves[x:x+line_w] for x in range(0, len(moves), line_w)]
@@ -292,18 +301,18 @@ def drawGrid(cube, moves):
             new_pos = (pos[0], pos[1] + i*30)
             # Checks if is the last line to write a dot instead of a comma
             if i < len(moves_splited)-1:
-                drawText(grid_frame, str(sub_moves).strip("[]") + ',', new_pos,
+                drawTextS(grid_frame, str(sub_moves).strip("[]") + ',', new_pos,
                          0.8, GRID_TEXT_COL, thickness=1)
             else:
-                drawText(grid_frame, str(sub_moves).strip("[]") + '.', new_pos,
+                drawTextS(grid_frame, str(sub_moves).strip("[]") + '.', new_pos,
                          0.8, GRID_TEXT_COL, thickness=1)
     elif len(cube) == 6:  # Solving error (moves are empty but all faces scanned)
-            drawText(grid_frame, 'ERROR while scanning the cube.', 
+            drawTextS(grid_frame, 'ERROR while scanning the cube.', 
                     (GRID_MARGIN, G_CUBE_S*2+GRID_SIZE*2), 0.75, GRID_TEXT_COL, 2)
-            drawText(grid_frame, 'Duplicated pieces.', 
+            drawTextS(grid_frame, 'Duplicated pieces.', 
                     (GRID_MARGIN, G_CUBE_S*2+GRID_SIZE*3), 0.75, GRID_TEXT_COL, 2)
     else:   # Faces not scanned yet
-        drawText(grid_frame, 'FACES: ' + str(len(cube)) + '/6',
+        drawTextS(grid_frame, 'FACES: ' + str(len(cube)) + '/6',
                  (GRID_MARGIN, G_CUBE_S*2+GRID_SIZE*2), 0.75, GRID_TEXT_COL, 2)
     # Return the result image
     return grid_frame
@@ -328,7 +337,9 @@ cv.createTrackbar('Face delay (frames)', 'input', INIT_FRAMES_DELAY, 120, nothin
 ## HELP WINDOW
 help = Help(
 """
-HELP WINDOW
+-------------------
+|       HELP WINDOW       |
+-------------------
 
 f: remove last face scanned
 r: reset the scan
@@ -389,7 +400,7 @@ for key, frame in autoStream():
     if rem_delay > 0:   # If there is remaining delay moves on to the next iteration
         rem_delay -= 1
         # If delay is taken, we indicate with text in green (instead of white)
-        drawText(frame, str(len(centers)) + '/6', (10, 30), 0.75, (60, 255, 60), 2)
+        drawTextC(frame, str(len(centers)) + '/6', (10, 30), 0.75, (60, 255, 60), 2)
         cv.imshow('input', frame)
         continue
     
@@ -464,60 +475,60 @@ for key, frame in autoStream():
             centers.append(actual_center)
             rem_delay = cv.getTrackbarPos('Face delay (frames)', 'input')
 
-        # IF ALL FACES HAVE BEEN SCANNED
-        if len(cube) == 6:
-            # List (of string) of the cube colors
-            cube_scanned = []
-            ### COLOR CLASSIFICATION ###
-            # The idea is that the colors of the centers work as a color model
-            # We compare each color of the cube with the nine center colors
-            # The nearest center color is assigned to that color
-            for face in cube:
-                # Difference between every color and all centers
-                difcolors = [ abs (face-c) for c in centers]
-                # Sum the values of every difference component
-                sumcolors = [ np.sum(dif, axis=1) for dif in difcolors ]
-                # Selects the nearest center
-                colorsdetected  = [ STRING_COLORS[d] for d in np.argmin(sumcolors, axis=0) ]
-                # Add the colors to the cube
-                cube_scanned.append(colorsdetected)
+            # IF ALL FACES HAVE BEEN SCANNED
+            if len(cube) == 6:
+                # List (of string) of the cube colors
+                cube_scanned = []
+                ### COLOR CLASSIFICATION ###
+                # The idea is that the colors of the centers work as a color model
+                # We compare each color of the cube with the nine center colors
+                # The nearest center color is assigned to that color
+                for face in cube:
+                    # Difference between every color and all centers
+                    difcolors = [ abs (face-c) for c in centers]
+                    # Sum the values of every difference component
+                    sumcolors = [ np.sum(dif, axis=1) for dif in difcolors ]
+                    # Selects the nearest center
+                    colorsdetected  = [ STRING_COLORS[d] for d in np.argmin(sumcolors, axis=0) ]
+                    # Add the colors to the cube
+                    cube_scanned.append(colorsdetected)
 
-            ### ADAPT TO THE SOLVER FORMAT  ###
-            # The order of the stickers on the scanned cube has to be the same as the order used by the solver. 
-            # We adapt this order:
-            cube_ord = []
-            # UP face stays the same
-            cube_ord.append(cube_scanned[0])
-            # The (scan) order FRONT-RIGHT-BACK-LEFT has to be LEFT-FRONT-RIGHT-BACK
-            cube_ord.append(cube_scanned[4])
-            cube_ord.append(cube_scanned[1])
-            cube_ord.append(cube_scanned[2])
-            cube_ord.append(cube_scanned[3])
-            # The BOTTOM face has to rotate -90 degrees
-            bottomface = (np.array(cube_scanned[5])).reshape(3, 3)
-            bottomface[:,[0, 2]] = bottomface[:,[2, 0]]
-            bottomface = bottomface.transpose()
-            cube_ord.append((bottomface.flatten()).tolist())
-            # Convert de list to string
-            cube_str = ""
-            for nm in cube_ord:
-                rows = ["".join(r) for r in  nm]
-                cube_str += "".join(rows)
+                ### ADAPT TO THE SOLVER FORMAT  ###
+                # The order of the stickers on the scanned cube has to be the same as the order used by the solver. 
+                # We adapt this order:
+                cube_ord = []
+                # UP face stays the same
+                cube_ord.append(cube_scanned[0])
+                # The (scan) order FRONT-RIGHT-BACK-LEFT has to be LEFT-FRONT-RIGHT-BACK
+                cube_ord.append(cube_scanned[4])
+                cube_ord.append(cube_scanned[1])
+                cube_ord.append(cube_scanned[2])
+                cube_ord.append(cube_scanned[3])
+                # The BOTTOM face has to rotate -90 degrees
+                bottomface = (np.array(cube_scanned[5])).reshape(3, 3)
+                bottomface[:,[0, 2]] = bottomface[:,[2, 0]]
+                bottomface = bottomface.transpose()
+                cube_ord.append((bottomface.flatten()).tolist())
+                # Convert de list to string
+                cube_str = ""
+                for nm in cube_ord:
+                    rows = ["".join(r) for r in  nm]
+                    cube_str += "".join(rows)
 
-            ### CHECK FOR DUPLICATED PIECES ###
-            # Check if there is 9 stickers of each color
-            count_list = list(map(lambda x: cube_str.count(x), STRING_COLORS))
-            print('Cube scanned: ' + cube_str)
-            # If no duplicated colors
-            if count_list == [9, 9, 9, 9, 9, 9]:
-                try:
-                    ### CUBE SOLVING ###
-                    moves = utils.solve(cube_str, 'Kociemba')
-                    print('> Solution: ' + str(moves))
-                except:
-                    print("> Not all edges or corners exist exactly once.")
-            else:    # Something went wrong while scanning
-                print('> Duplicated piece: ' + str(STRING_COLORS) + ' scanned ' + str(count_list) + ' times.')
+                ### CHECK FOR DUPLICATED PIECES ###
+                # Check if there is 9 stickers of each color
+                count_list = list(map(lambda x: cube_str.count(x), STRING_COLORS))
+                print('Cube scanned: ' + cube_str)
+                # If no duplicated colors
+                if count_list == [9, 9, 9, 9, 9, 9]:
+                    try:
+                        ### CUBE SOLVING ###
+                        moves = utils.solve(cube_str, 'Kociemba')
+                        print('> Solution: ' + str(moves))
+                    except:
+                        print("> Not all edges or corners exist exactly once.")
+                else:    # Something went wrong while scanning
+                    print('> Duplicated piece: ' + str(STRING_COLORS) + ' scanned ' + str(count_list) + ' times.')
 
     # SHOW WINDOWS
     # Draw contours
@@ -531,10 +542,9 @@ for key, frame in autoStream():
         # Draw the order of the nine points of the face
         if reasonable_points:
             for i in range(9):
-                cv.putText(frame, str(i), reasonable_points[i], cv.FONT_HERSHEY_SIMPLEX, 
-                           0.4, (255, 255, 255), 1, cv.LINE_AA)
+                drawTextS(frame, str(i), reasonable_points[i], 0.4, (255, 255, 255), 1)
     # Frames scanned text
-    drawText(frame, str(len(centers)) + '/6', (10, 30), 0.75, (255, 255, 255), 2)
+    drawTextC(frame, str(len(centers)) + '/6', (10, 30), 0.75, (255, 255, 255), 2)
     # Input window
     cv.imshow('input', frame)
     # Canny window
