@@ -332,6 +332,7 @@ cv.moveWindow('input', 0, 100)
 def nothing(x): pass
 # Trackbar for border dilatation value
 cv.createTrackbar('Sensibility', 'input', INIT_BORDER_DIL, 6, nothing)
+cv.setTrackbarMin('Sensibility', 'input', 1)
 cv.createTrackbar('Face delay (frames)', 'input', INIT_FRAMES_DELAY, 120, nothing)
 
 ## HELP WINDOW
